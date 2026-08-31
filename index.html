@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royee Profile</title>
+    <!-- 引入 Three.js 和 GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <!-- 引入高强度粗体字体 -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@800;900&family=Noto+Sans+SC:wght@700;800;900&display=swap">
+    
+    <style>
+        /* ==================== 基础与新丑风核心样式 ==================== */
+        :root {
+            --color-home: #FFE500;
+            --color-about: #FF2D78;
+            --color-edu: #0066FF;
+            --color-intern: #FF6B00;
+            --color-skill: #00FF88;
+            --color-work: #9D00FF;
+            --color-contact: #00BCD4;
+            
+            --border-black: 5px solid #000000;
+            --shadow-hard: 8px 8px 0px #000000;
+            --shadow-hard-hover: 12px 12px 0px #000000;
+            --shadow-hard-active: 2px 2px 0px #000000;
+            --bg-active: var(--color-home);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        body, html {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Plus Jakarta Sans', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-active);
+            color: #000;
+            /* 黑色波点网格背景纹理 */
+            background-image: 
+                radial-gradient(#000 2px, transparent 2px),
+                linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0,0,0,0.08) 1px, transparent 1px);
+            background-size: 32px 32px, 32px 32px, 32px 32px;
+            /* 突变背景色过渡，不使用线性渐变 */
+            transition: background-color 0.001s;
+        }
+
+        /* Three.js 3D背景画布 */
+        #webgl-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* 纸屑爆裂 Canvas Overlay */
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 99;
+            pointer-events: none;
+        }
+
+        /* 主UI容器 */
+        #app {
+            position: relative;
+            z-index: 10;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* ==================== 按钮与控制组件 ==================== */
+        .btn-brutal {
+            background: #FFF;
+            color: #000;
+            font-weight: 800;
+            font-size: 16px;
+            padding: 10px 20px;
+            border: var(--border-black);
+            box-shadow: var(--shadow-hard);
+            cursor: pointer;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.1s, box-shadow 0.1s, background-color 0.1s;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+        .btn-brutal:hover {
+            transform: translate(-3px, -3px);
+            box-shadow: var(--shadow-hard-hover);
+            background: #FFE500;
+        }
+
+        .btn-brutal:active {
+            transform: translate(4px, 4px);
+            box-shadow: var(--shadow-hard-active);
+        }
+
+        /* 返回首页按钮 */
+        #home-btn {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-20px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        #home-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        /* 底部导航圆点 */
+        #bottom-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #FFF;
+            padding: 10px 20px;
+            border: var(--border-black);
+            box-shadow: 6px 6px 0px #000;
+            border-radius: 40px;
+        }
+
+        .nav-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 3px solid #000;
+            background: #FFF;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .nav-dot:hover {
+            transform: scale(1.3);
+            background: #FFE500;
+        }
+
+        .nav-dot.active {
+            background: #000;
+            transform: scale(1.2);
+        }
+
+        .nav-hint {
+            font-size: 12px;
+            font-weight: 800;
+            margin-left: 8px;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .key-cap {
+            background: #EEE;
+            border: 2px solid #000;
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-size: 10px;
+            box-shadow: 2px 2px 0 #000;
+        }
+
+        /* ==================== 舞台与人物视角 ==================== */
+        .stage-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* 锚点人物盒子 */
+        .avatar-anchor {
+            position: relative;
+            width: min(42vw, 52vh);
+            height: min(42vw, 52vh);
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .avatar-img-wrapper {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            filter: drop-shadow(8px 8px 0px #000000);
+            animation: breathing 3.5s ease-in-out infinite;
+        }
+
+        @keyframes breathing {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(1.5deg); }
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        /* 首页文字与标题 */
+        .home-header {
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            white-space: nowrap;
+            z-index: 25;
+            pointer-events: none;
+        }
+
+        .main-title {
+            font-size: clamp(32px, 6vw, 64px);
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #FFF;
+            text-shadow: 
+                4px 4px 0 #000,
+                -4px -4px 0 #000,
+                4px -4px 0 #000,
+                -4px 4px 0 #000,
+                8px 8px 0 #000;
+            margin-bottom: 8px;
+        }
+
+        .home-hint {
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #FFF;
+            border: var(--border-black);
+            box-shadow: 4px 4px 0 #000;
+            padding: 6px 16px;
+            font-weight: 800;
+            font-size: 14px;
+            white-space: nowrap;
+            border-radius: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
+        }
+
+        /* 环绕节点标签 */
+        .tag-node {
+            position: absolute;
+            background: #FFF;
+            border: var(--border-black);
+            box-shadow: var(--shadow-hard);
+            padding: 10px 20px;
+            font-weight: 900;
+            font-size: clamp(14px, 2vw, 20px);
+            cursor: pointer;
+            z-index: 30;
+            border-radius: 8px;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+            white-space: nowrap;
+        }
+
+        .tag-node:hover {
+            transform: scale(1.1) rotate(0deg) !important;
+            box-shadow: var(--shadow-hard-hover);
+            background: #FFE500;
+            z-index: 40;
+        }
+
+        /* 6个结点的离心定位 */
+        .tag-node[data-target="about"]     { top: 2%;   left: -22%; transform: rotate(-4deg); background: var(--color-about); color: #FFF; }
+        .tag-node[data-target="edu"]       { top: 40%;  left: -32%; transform: rotate(3deg);  background: var(--color-edu); color: #FFF; }
+        .tag-node[data-target="intern"]    { bottom: 5%; left: -18%; transform: rotate(-2deg); background: var(--color-intern); color: #FFF; }
+        .tag-node[data-target="skill"]     { top: 2%;   right: -22%; transform: rotate(4deg);  background: var(--color-skill); color: #000; }
+        .tag-node[data-target="work"]      { top: 40%;  right: -32%; transform: rotate(-3deg); background: var(--color-work); color: #FFF; }
+        .tag-node[data-target="contact"]   { bottom: 5%; right: -18%; transform: rotate(2deg);  background: var(--color-contact); color: #000; }
+
+        /* ==================== 板块详细信息面板 ==================== */
+        .panel-container {
+            position: absolute;
+            width: clamp(320px, 42vw, 620px);
+            max-height: 78vh;
+            background: #FFF;
+            border: var(--border-black);
+            box-shadow: 12px 12px 0px #000;
+            border-radius: 12px;
+            padding: 28px;
+            overflow-y: auto;
+            z-index: 25;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.8) translateY(40px);
+            transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-bottom: 4vh;
+        }
+
+        /* 自定义面板滚动条 */
+        .panel-container::-webkit-scrollbar {
+            width: 10px;
+        }
+        .panel-container::-webkit-scrollbar-track {
+            background: #FFF;
+            border-left: 3px solid #000;
+        }
+        .panel-container::-webkit-scrollbar-thumb {
+            background: #000;
+            border-radius: 4px;
+        }
+
+        .panel-container.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1) translateY(0);
+        }
+
+        .panel-title {
+            font-size: clamp(22px, 3.5vw, 36px);
+            font-weight: 900;
+            text-transform: uppercase;
+            display: inline-block;
+            padding: 4px 14px;
+            background: #000;
+            color: #FFF;
+            border-radius: 4px;
+            box-shadow: 4px 4px 0 #FFE500;
+            margin-left: -10px;
+            margin-bottom: 20px;
+            transform: rotate(-1.5deg);
+        }
+
+        /* 亮黄色高亮块 */
+        .hl {
+            background: #FFE500;
+            color: #000;
+            padding: 2px 6px;
+            font-weight: 900;
+            border: 2px solid #000;
+            border-radius: 3px;
+            display: inline-block;
+            box-shadow: 2px 2px 0 #000;
+            margin: 0 2px;
+        }
+
+        /* 关于我面板组件 */
+        .pills-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .pill-item {
+            background: #FFE500;
+            border: 3px solid #000;
+            box-shadow: 3px 3px 0 #000;
+            font-weight: 800;
+            font-size: 14px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            transform: rotate(calc(-2deg + 4deg * var(--r, 0.5)));
+        }
+
+        .bio-text {
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.7;
+            background: #F4F4F4;
+            border: 3px solid #000;
+            padding: 16px;
+            box-shadow: 4px 4px 0 #000;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        /* 实习时间线 */
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            position: relative;
+            padding-left: 12px;
+            border-left: 4px solid #000;
+        }
+
+        .timeline-item {
+            position: relative;
+            background: #FFF;
+            border: 3px solid #000;
+            box-shadow: 5px 5px 0 #000;
+            padding: 14px;
+            border-radius: 8px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -23px;
+            top: 16px;
+            width: 14px;
+            height: 14px;
+            background: #FF2D78;
+            border: 3px solid #000;
+            border-radius: 50%;
+        }
+
+        .timeline-date {
+            font-size: 12px;
+            font-weight: 900;
+            background: #000;
+            color: #FFF;
+            padding: 2px 8px;
+            display: inline-block;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+
+        .timeline-role {
+            font-weight: 900;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .timeline-desc {
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.5;
+            color: #222;
+        }
+
+        /* 技能进度条 */
+        .skill-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .skill-card {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 12px;
+            background: #FFF;
+            border-radius: 6px;
+        }
+
+        .skill-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 900;
+            margin-bottom: 6px;
+        }
+
+        .skill-bar-outer {
+            height: 20px;
+            background: #FFF;
+            border: 3px solid #000;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 2px 2px 0 rgba(0,0,0,0.1);
+        }
+
+        .skill-bar-inner {
+            height: 100%;
+            background: var(--color-skill);
+            /* 斜条纹纹理 */
+            background-image: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(0,0,0,0.15) 10px,
+                rgba(0,0,0,0.15) 20px
+            );
+            border-right: 3px solid #000;
+            width: 0%;
+            transition: width 1s cubic-bezier(0.1, 0.5, 0.1, 1);
+        }
+
+        /* 作品网格卡片 */
+        .work-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        .work-card {
+            border: 3px solid #000;
+            box-shadow: 5px 5px 0 #000;
+            padding: 12px;
+            background: #FFF;
+            border-radius: 8px;
+            transition: transform 0.2s;
+        }
+
+        .work-card:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 7px 7px 0 #000;
+        }
+
+        .work-title {
+            font-weight: 900;
+            font-size: 16px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 联系方式气泡 */
+        .contact-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .contact-bubble {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #FFF;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 12px 18px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 16px;
+        }
+
+        /* ==================== 响应式布局：不同视角排版 ==================== */
+        
+        /* 1. 首页 (Home) */
+        .view-home .avatar-anchor {
+            transform: translate(0, 0) scale(1);
+        }
+
+        /* 2. 关于我 (About) - 桌面端：人物左侧特写，面板右侧 */
+        @media (min-width: 768px) {
+            .view-about .avatar-anchor {
+                transform: translate(-28vw, 0) scale(1.15);
+            }
+            .view-about .panel-about {
+                right: 8vw;
+                top: 50%;
+                transform: translateY(-50%) scale(1);
+            }
+
+            /* 3. 教育 (Education) - 人物右下角，面板左上 */
+            .view-edu .avatar-anchor {
+                transform: translate(28vw, 20vh) scale(0.85);
+            }
+            .view-edu .panel-edu {
+                left: 8vw;
+                top: 12vh;
+                transform: scale(1);
+            }
+
+            /* 4. 实习 (Internship) - 人物下方远景，面板上方纵向 */
+            .view-intern .avatar-anchor {
+                transform: translate(0, 32vh) scale(0.65);
+            }
+            .view-intern .panel-intern {
+                left: 50%;
+                top: 6vh;
+                transform: translateX(-50%) scale(1);
+            }
+
+            /* 5. 技能 (Skills) - 人物居中靠后，面板在中央 */
+            .view-skill .avatar-anchor {
+                transform: translate(0, -10vh) scale(0.75);
+                opacity: 0.4;
+            }
+            .view-skill .panel-skill {
+                left: 50%;
+                top: 52%;
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            /* 6. 作品 (Portfolio) - 人物左侧，面板右侧 */
+            .view-work .avatar-anchor {
+                transform: translate(-28vw, 0) scale(0.95);
+            }
+            .view-work .panel-work {
+                right: 6vw;
+                top: 50%;
+                transform: translateY(-50%) scale(1);
+            }
+
+            /* 7. 联系 (Contact) - 人物居中比耶，面板围绕/底部 */
+            .view-contact .avatar-anchor {
+                transform: translate(0, -12vh) scale(1.05);
+            }
+            .view-contact .panel-contact {
+                left: 50%;
+                bottom: 8vh;
+                transform: translateX(-50%) scale(1);
+            }
+        }
+
+        /* 移动端 (<768px) 统一改为上下布局 */
+        @media (max-width: 767px) {
+            .avatar-anchor {
+                width: min(55vw, 28vh) !important;
+                height: min(55vw, 28vh) !important;
+            }
+
+            .home-header {
+                top: -80px;
+            }
+
+            .main-title {
+                font-size: 32px;
+            }
+
+            .panel-container {
+                width: 90vw !important;
+                max-height: 52vh !important;
+                left: 5% !important;
+                right: auto !important;
+                bottom: 12vh !important;
+                top: auto !important;
+                margin-bottom: 0 !important;
+            }
+
+            /* 移动端各视角下的头像缩放与平移 */
+            .view-about .avatar-anchor,
+            .view-edu .avatar-anchor,
+            .view-intern .avatar-anchor,
+            .view-skill .avatar-anchor,
+            .view-work .avatar-anchor,
+            .view-contact .avatar-anchor {
+                transform: translate(0, -26vh) scale(0.85) !important;
+                opacity: 1 !important;
+            }
+
+            .tag-node {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+
+            /* 离心标签在移动端微调 */
+            .tag-node[data-target="about"]     { top: -10%; left: -15%; }
+            .tag-node[data-target="edu"]       { top: 35%;  left: -28%; }
+            .tag-node[data-target="intern"]    { bottom: -10%; left: -10%; }
+            .tag-node[data-target="skill"]     { top: -10%; right: -15%; }
+            .tag-node[data-target="work"]      { top: 35%;  right: -28%; }
+            .tag-node[data-target="contact"]   { bottom: -10%; right: -10%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Three.js 3D背景空间 -->
+    <canvas id="webgl-canvas"></canvas>
+    <!-- 切换板块时的纸屑爆裂 Canvas -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- 返回首页按钮 -->
+    <button id="home-btn" class="btn-brutal" onclick="switchSection('home')">
+        ← 返回首页 <span class="key-cap">ESC</span>
+    </button>
+
+    <!-- 主界面舞台 -->
+    <div id="app" class="view-home">
+        <div class="stage-container" id="stage">
+            
+            <!-- 视觉锚点：自画像 -->
+            <div class="avatar-anchor" id="avatar-anchor">
+                
+                <!-- 首页标题与Slogan -->
+                <div class="home-header" id="home-header">
+                    <h1 class="main-title">欧阳蓉蓉</h1>
+                </div>
+
+                <!-- 自画像图片容器 -->
+                <div class="avatar-img-wrapper">
+                    <!-- 
+                        自画像图片URL占位符 (已自动抠图支持透明背景) 
+                        方便替换URL: https://aka.doubaocdn.com/s/B1rZ2TwsLp
+                    -->
+                    <img src="https://aka.doubaocdn.com/s/B1rZ2TwsLp" alt="欧阳蓉蓉自画像" class="avatar-img" id="portrait-img">
+                </div>
+
+                <!-- 6个围绕标签节点 (首页展示) -->
+                <div class="tag-node" data-target="about" onclick="switchSection('about')">✦ 关于我</div>
+                <div class="tag-node" data-target="edu" onclick="switchSection('edu')">🎓 教育</div>
+                <div class="tag-node" data-target="intern" onclick="switchSection('intern')">💼 实习</div>
+                <div class="tag-node" data-target="skill" onclick="switchSection('skill')">⚡ 技能</div>
+                <div class="tag-node" data-target="work" onclick="switchSection('work')">🔥 作品</div>
+                <div class="tag-node" data-target="contact" onclick="switchSection('contact')">📞 联系</div>
+
+                <div class="home-hint" id="home-hint">🐭 移动鼠标探索 · 点击标签进入</div>
+            </div>
+
+            <!-- ==================== 6个板块详细面板 ==================== -->
+
+            <!-- 1. 关于我 -->
+            <div class="panel-container panel-about" id="panel-about">
+                <div class="panel-title">ABOUT ME // 关于我</div>
+                <div class="pills-cloud">
+                    <span class="pill-item" style="--r:0.2">ENFP</span>
+                    <span class="pill-item" style="--r:0.8">双子座</span>
+                    <span class="pill-item" style="--r:0.4">天马行空</span>
+                    <span class="pill-item" style="--r:0.9">跳舞散修兵</span>
+                    <span class="pill-item" style="--r:0.1">甜美酷飒</span>
+                    <span class="pill-item" style="--r:0.6">小麦肤色</span>
+                    <span class="pill-item" style="--r:0.3">金丝眼镜</span>
+                </div>
+                <div class="bio-text">
+                    电脑技术较成熟，掌握剪辑技术、网页设计及数据分析能力，倾向于<span class="hl">AI驱动辅助工作</span>高效率完成。注重团队合作，乐于学习锻炼，工作认真。性格外向，与人为善，能在短期内融入集体生活。
+                </div>
+                <div style="font-weight: 900; font-size: 14px; background: #000; color: #FFF; padding: 6px 12px; display: inline-block; border-radius: 4px;">
+                    🎂 生日：2006.5.6
+                </div>
+            </div>
+
+            <!-- 2. 教育 -->
+            <div class="panel-container panel-edu" id="panel-edu">
+                <div class="panel-title">EDUCATION // 教育背景</div>
+                <div style="border: 3px solid #000; box-shadow: 6px 6px 0 #000; padding: 20px; background: #FFF; border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 20px; font-weight: 900;">中央民族大学</span>
+                        <span class="hl">985 双一流</span>
+                    </div>
+                    <div style="font-weight: 800; font-size: 16px; margin-bottom: 8px; color: #333;">
+                        📚 专业：网络与新媒体
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 14px; color: #666;">
+                        <span>🎓 学历：本科在读</span>
+                        <span>⏳ 2023/09 ~ 至今</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 实习 -->
+            <div class="panel-container panel-intern" id="panel-intern">
+                <div class="panel-title">EXPERIENCE // 实习经历</div>
+                <div class="timeline">
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-date">2026/3 ~ 2026/6</div>
+                        <div class="timeline-role">短剧运营实习生 · 北京点众科技股份有限公司</div>
+                        <div class="timeline-desc">
+                            版权运营部，短剧版权日常运营，建立分渠道资源库，对接联通/淘宝/Kuku TV/TikTok，交接项目<span class="hl">13次</span>。
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025/10 ~ 2026/1</div>
+                        <div class="timeline-role">新媒体运营实习生 · 新浪财经</div>
+                        <div class="timeline-desc">
+                            “新浪数码”账号全平台内容，评测脚本/拍摄/剪辑/封面/文案，9个评测项目、17个结案报告，IQOO Z11 Turbo评测视频号<span class="hl">点赞破千</span>。
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025/3 ~ 2025/6</div>
+                        <div class="timeline-role">项目运营实习生 · 新浪财经</div>
+                        <div class="timeline-desc">
+                            校企合作项目，文稿/速记/竞品监测/海报，获“<span class="hl">菁英生代表</span>”。
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-date">2024/10 ~ 2025/1</div>
+                        <div class="timeline-role">策划部实习生 · 北京正在上演文化传媒</div>
+                        <div class="timeline-desc">
+                            中国网·中国演艺频道策划，<span class="hl">43个</span>方案、28条热搜贴、28张宣传照、4个视频。
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 4. 技能 -->
+            <div class="panel-container panel-skill" id="panel-skill">
+                <div class="panel-title">SKILLS // 核心技能</div>
+                <div class="skill-group">
+                    
+                    <div class="skill-card">
+                        <div class="skill-header">
+                            <span>✍️ 文案策划</span>
+                            <span style="font-size: 20px;">95%</span>
+                        </div>
+                        <div class="skill-bar-outer">
+                            <div class="skill-bar-inner" data-progress="95%"></div>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 700; margin-top: 6px; color: #444;">
+                            扎实文字功底与网感，追踪全网热点，高转化文案
+                        </div>
+                    </div>
+
+                    <div class="skill-card">
+                        <div class="skill-header">
+                            <span>🎬 视频剪辑</span>
+                            <span style="font-size: 20px;">90%</span>
+                        </div>
+                        <div class="skill-bar-outer">
+                            <div class="skill-bar-inner" data-progress="90%"></div>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 700; margin-top: 6px; color: #444;">
+                            抖音/微博/小红书自媒体经验，精通剪映，AI辅助，独立全流程
+                        </div>
+                    </div>
+
+                    <div class="skill-card">
+                        <div class="skill-header">
+                            <span>🎨 视觉设计</span>
+                            <span style="font-size: 20px;">88%</span>
+                        </div>
+                        <div class="skill-bar-outer">
+                            <div class="skill-bar-inner" data-progress="88%"></div>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 700; margin-top: 6px; color: #444;">
+                            PS / AI / Figma / Canva / Framer UI，海报物料，图形精修，视觉排版
+                        </div>
+                    </div>
+
+                </div>
+
+                <div style="background: #FFF; border: 3px solid #000; box-shadow: 4px 4px 0 #000; padding: 12px; border-radius: 6px;">
+                    <div style="font-weight: 900; margin-bottom: 6px;">🛠️ 其他技能清单：</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <span class="hl">WPS办公</span>
+                        <span class="hl">网页设计</span>
+                        <span class="hl">数据分析</span>
+                        <span class="hl">CET4</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. 作品 -->
+            <div class="panel-container panel-work" id="panel-work">
+                <div class="panel-title">PORTFOLIO // 代表作品</div>
+                
+                <a href="https://khsj.cn/ml4i7i1cnfkayg9" target="_blank" class="btn-brutal" style="width: 100%; justify-content: center; background: #FFE500; margin-bottom: 18px; font-size: 18px;">
+                    ⚡ 查看完整作品集链接 →
+                </a>
+
+                <div class="work-grid">
+                    <div class="work-card">
+                        <div class="work-title">💡 大创项目：博物馆民族文化游戏化传播</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #555;">
+                            包含 AI表情包、AI宣传短片、剧本杀实物物料全套设计
+                        </div>
+                    </div>
+
+                    <div class="work-card">
+                        <div class="work-title">📱 IQOO Z11 Turbo 评测视频</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #555;">
+                            全流程独立完成，视频号<span class="hl">点赞破千</span>
+                        </div>
+                    </div>
+
+                    <div class="work-card">
+                        <div class="work-title">📑 43个演艺频道策划方案</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #555;">
+                            中国网·中国演艺频道深度策划与落地执行
+                        </div>
+                    </div>
+
+                    <div class="work-card">
+                        <div class="work-title">📸 28张宣传照与宣发设计</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #555;">
+                            精美视觉海报，支撑多条热搜贴爆款传播
+                        </div>
+                    </div>
+
+                    <div class="work-card">
+                        <div class="work-title">🏆 全国大学生广告艺术大赛</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #555;">
+                            影视广告类 <span class="hl">三等奖作品</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. 联系 -->
+            <div class="panel-container panel-contact" id="panel-contact">
+                <div class="panel-title">CONTACT // 联系方式</div>
+                <div class="contact-list">
+                    <div class="contact-bubble">
+                        <span>📞 电话：</span>
+                        <span>18786510896</span>
+                    </div>
+                    <div class="contact-bubble">
+                        <span>💬 微信：</span>
+                        <span>manme1206</span>
+                    </div>
+                    <div class="contact-bubble">
+                        <span>✉️ 邮箱：</span>
+                        <span>18786510896@163.com</span>
+                    </div>
+                </div>
+
+                <button class="btn-brutal" style="width: 100%; justify-content: center; background: #FF2D78; color: #FFF; font-size: 20px; padding: 14px;" onclick="alert('感谢关注！欢迎随时联系~')">
+                    期待与你合作 ✦
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 底部圆点导航条 -->
+    <div id="bottom-nav">
+        <div class="nav-dot active" onclick="switchSection('home')" title="首页"></div>
+        <div class="nav-dot" onclick="switchSection('about')" title="关于我"></div>
+        <div class="nav-dot" onclick="switchSection('edu')" title="教育"></div>
+        <div class="nav-dot" onclick="switchSection('intern')" title="实习"></div>
+        <div class="nav-dot" onclick="switchSection('skill')" title="技能"></div>
+        <div class="nav-dot" onclick="switchSection('work')" title="作品"></div>
+        <div class="nav-dot" onclick="switchSection('contact')" title="联系"></div>
+        <div class="nav-hint">
+            <span class="key-cap">←</span>
+            <span class="key-cap">→</span> 切换
+        </div>
+    </div>
+
+    <!-- ==================== Three.js & 交互脚本 ==================== -->
+    <script>
+        // 板块配置参数
+        const SECTIONS = ['home', 'about', 'edu', 'intern', 'skill', 'work', 'contact'];
+        const SECTION_COLORS = {
+            home: '#FFE500',
+            about: '#FF2D78',
+            edu: '#0066FF',
+            intern: '#FF6B00',
+            skill: '#00FF88',
+            work: '#9D00FF',
+            contact: '#00BCD4'
+        };
+
+        let currentSectionIndex = 0;
+
+        // ==================== Three.js 3D 沉浸式场景初始化 ====================
+        const canvas = document.getElementById('webgl-canvas');
+        const scene = new THREE.Scene();
+        
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 15;
+
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // 3D 漂浮几何体群（新丑风高饱和立体方块/环形）
+        const geometryGroup = new THREE.Group();
+        scene.add(geometryGroup);
+
+        const materials = [
+            new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true }),
+            new THREE.MeshBasicMaterial({ color: 0xFF2D78 }),
+            new THREE.MeshBasicMaterial({ color: 0x0066FF }),
+            new THREE.MeshBasicMaterial({ color: 0x00FF88 }),
+            new THREE.MeshBasicMaterial({ color: 0xFFE500 })
+        ];
+
+        const geometries = [
+            new THREE.BoxGeometry(1.2, 1.2, 1.2),
+            new THREE.TorusGeometry(0.8, 0.3, 8, 16),
+            new THREE.OctahedronGeometry(1)
+        ];
+
+        // 随机在空间中放置30个几何体
+        for (let i = 0; i < 30; i++) {
+            const geom = geometries[Math.floor(Math.random() * geometries.length)];
+            const mat = materials[Math.floor(Math.random() * materials.length)];
+            const mesh = new THREE.Mesh(geom, mat);
+
+            mesh.position.set(
+                (Math.random() - 0.5) * 35,
+                (Math.random() - 0.5) * 25,
+                (Math.random() - 0.5) * 15 - 5
+            );
+            mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+            
+            // 记录初始旋转速度
+            mesh.userData = {
+                rotX: (Math.random() - 0.5) * 0.02,
+                rotY: (Math.random() - 0.5) * 0.02
+            };
+
+            geometryGroup.add(mesh);
+        }
+
+        // ==================== 鼠标视差效果 (Parallax) ====================
+        let mouseX = 0, mouseY = 0;
+        let targetCamX = 0, targetCamY = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+            mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+        });
+
+        // ==================== 纸屑爆发 (Confetti Particles) ====================
+        const confettiCanvas = document.getElementById('confetti-canvas');
+        const ctx = confettiCanvas.getContext('2d');
+        let confettiParticles = [];
+
+        function resizeConfetti() {
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+        }
+        resizeConfetti();
+
+        function triggerConfetti() {
+            confettiParticles = [];
+            const colors = ['#000000', '#FFFFFF', '#FFE500', '#FF2D78', '#0066FF', '#00FF88'];
+            for (let i = 0; i < 60; i++) {
+                confettiParticles.push({
+                    x: window.innerWidth / 2,
+                    y: window.innerHeight / 2,
+                    vx: (Math.random() - 0.5) * 24,
+                    vy: (Math.random() - 0.5) * 24 - 4,
+                    size: Math.random() * 12 + 6,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rotation: Math.random() * Math.PI * 2,
+                    vRot: (Math.random() - 0.5) * 0.2,
+                    shape: Math.random() > 0.5 ? 'rect' : 'triangle'
+                });
+            }
+        }
+
+        function updateAndDrawConfetti() {
+            ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            confettiParticles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.4; // 重力
+                p.rotation += p.vRot;
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                ctx.fillStyle = p.color;
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+
+                if (p.shape === 'rect') {
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                    ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(0, -p.size);
+                    ctx.lineTo(p.size, p.size);
+                    ctx.lineTo(-p.size, p.size);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+
+                if (p.y > window.innerHeight + 50) {
+                    confettiParticles.splice(index, 1);
+                }
+            });
+        }
+
+        // 渲染主循环 60fps
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // 鼠标视差平滑插值
+            targetCamX += (mouseX * 1.5 - targetCamX) * 0.05;
+            targetCamY += (-mouseY * 1.5 - targetCamY) * 0.05;
+
+            camera.position.x = targetCamX;
+            camera.position.y = targetCamY;
+            camera.lookAt(0, 0, 0);
+
+            // 3D 几何体自转
+            geometryGroup.children.forEach(mesh => {
+                mesh.rotation.x += mesh.userData.rotX;
+                mesh.rotation.y += mesh.userData.rotY;
+            });
+
+            renderer.render(scene, camera);
+            updateAndDrawConfetti();
+        }
+        animate();
+
+        // ==================== 板块切换核心逻辑 ====================
+        function switchSection(targetSection) {
+            const sectionIndex = SECTIONS.indexOf(targetSection);
+            if (sectionIndex === -1) return;
+
+            currentSectionIndex = sectionIndex;
+            const app = document.getElementById('app');
+
+            // 1. 背景高饱和颜色直接突变 (无线性过渡)
+            document.body.style.backgroundColor = SECTION_COLORS[targetSection];
+
+            // 2. 更改 class 切换 CSS 视图样式
+            app.className = `view-${targetSection}`;
+
+            // 3. 显示/隐藏 返回首页按钮
+            const homeBtn = document.getElementById('home-btn');
+            if (targetSection === 'home') {
+                homeBtn.classList.remove('visible');
+            } else {
+                homeBtn.classList.add('visible');
+            }
+
+            // 4. 更新底部导航圆点
+            const dots = document.querySelectorAll('.nav-dot');
+            dots.forEach((dot, idx) => {
+                if (idx === currentSectionIndex) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+
+            // 5. 切换板块面板激活状态
+            document.querySelectorAll('.panel-container').forEach(panel => {
+                panel.classList.remove('active');
+            });
+
+            if (targetSection !== 'home') {
+                const activePanel = document.getElementById(`panel-${targetSection}`);
+                if (activePanel) {
+                    activePanel.classList.add('active');
+                }
+            }
+
+            // 6. 技能板块激活时触发进度条动画
+            if (targetSection === 'skill') {
+                setTimeout(() => {
+                    document.querySelectorAll('.skill-bar-inner').forEach(bar => {
+                        bar.style.width = bar.getAttribute('data-progress');
+                    });
+                }, 200);
+            } else {
+                document.querySelectorAll('.skill-bar-inner').forEach(bar => {
+                    bar.style.width = '0%';
+                });
+            }
+
+            // 7. 3D镜头与几何体视角平滑过渡 (GSAP Tween)
+            gsap.to(geometryGroup.rotation, {
+                y: sectionIndex * 0.8,
+                x: sectionIndex * 0.3,
+                duration: 1.2,
+                ease: 'power3.out'
+            });
+
+            // 8. 触发纸屑爆发动画
+            triggerConfetti();
+        }
+
+        // ==================== 键盘按键监听 ====================
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                switchSection('home');
+            } else if (e.key === 'ArrowRight') {
+                const nextIndex = (currentSectionIndex + 1) % SECTIONS.length;
+                switchSection(SECTIONS[nextIndex]);
+            } else if (e.key === 'ArrowLeft') {
+                const prevIndex = (currentSectionIndex - 1 + SECTIONS.length) % SECTIONS.length;
+                switchSection(SECTIONS[prevIndex]);
+            }
+        });
+
+        // ==================== 窗口 Resize 响应式调整 ====================
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            resizeConfetti();
+        });
+    </script>
+</body>
+</html>
